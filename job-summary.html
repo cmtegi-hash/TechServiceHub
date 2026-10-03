@@ -80,6 +80,7 @@ function nuevoEstado() {
     equipment: [], products: [],
     description: "",
     summary: "",
+    hasCopiedSummary: false,
   };
 }
 let state = cargar();
@@ -163,6 +164,14 @@ function render() {
       <h2>Final Job Summary</h2>
       <pre id="summaryText">${state.summary.replace(/</g,'&lt;')}</pre>
       <button class="btn block" id="copySummary">📋 Copy Summary</button>
+
+      <h2>Nuevo trabajo</h2>
+      <div class="card">
+        ${state.hasCopiedSummary
+          ? `<button class="btn block ghost" id="resetJob">🗑 Nuevo trabajo (borrar todo)</button>`
+          : `<p style="color:var(--done);font-size:13px;margin:0 0 10px">Copia el resumen al menos una vez para poder empezar uno nuevo.</p>
+             <button class="btn block ghost" disabled>🗑 Nuevo trabajo</button>`}
+      </div>
     ` : ""}
   `;
   bind();
@@ -241,13 +250,23 @@ function bind() {
 
   const copyBtn = document.getElementById("copySummary");
   if (copyBtn) copyBtn.addEventListener("click", (e) => {
+    state.hasCopiedSummary = true;
+    guardar();
     navigator.clipboard.writeText(state.summary).then(() => {
       e.target.innerText = "✅ Copied!";
-      setTimeout(() => { e.target.innerText = "📋 Copy Summary"; }, 1800);
+      setTimeout(() => { render(); }, 1800);
     }).catch(() => {
       e.target.innerText = "⚠️ Could not copy — select text manually";
-      setTimeout(() => { e.target.innerText = "📋 Copy Summary"; }, 2500);
+      setTimeout(() => { render(); }, 2500);
     });
+  });
+
+  const resetBtn = document.getElementById("resetJob");
+  if (resetBtn) resetBtn.addEventListener("click", () => {
+    if (confirm("¿Seguro? Se borrará todo lo ingresado de este trabajo.")) {
+      state = nuevoEstado();
+      guardar(); render();
+    }
   });
 }
 
