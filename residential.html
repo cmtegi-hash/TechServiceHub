@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Residential — Tech Service</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1F2A24">
+<style>
+  :root {
+    --bg: #F6F3EC; --ink: #1F2A24; --accent: #4B6A4E; --accent-2: #8A6A3C;
+    --line: #D8D2C2; --done: #9A9A8E; --card: #FFFFFF;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141815; --ink: #EDEAE2; --accent: #7FA383;
+      --accent-2: #C9A26B; --line: #2B322C; --done: #5C6259; --card: #1B211C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141815; --ink: #EDEAE2; --accent: #7FA383;
+    --accent-2: #C9A26B; --line: #2B322C; --done: #5C6259; --card: #1B211C;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+  header {
+    padding: 20px 16px 12px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  main { padding: 14px 16px 90px; max-width: 520px; margin: 0 auto; }
+  h2 { font-size: 16px; margin: 18px 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: none; }
+  .muted { color: var(--done); font-size: 13px; }
+  label { display: block; font-size: 13px; color: var(--done); margin-bottom: 4px; }
+  input[type=text], input[type=number], select {
+    width: 100%; font-size: 16px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-family: inherit;
+  }
+  .field { margin-bottom: 10px; }
+  .btn {
+    font-family: inherit; font-size: 15px; font-weight: 600; padding: 11px 16px;
+    border-radius: 10px; border: none; background: var(--accent); color: var(--bg); cursor: pointer;
+  }
+  .btn.secondary { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .btn.small { padding: 7px 12px; font-size: 13px; }
+  .btn.block { width: 100%; }
+  .btn:active { opacity: .85; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tally { background: var(--card); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 10px 0; }
+  .tally b { color: var(--accent-2); }
+  .sub-item { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--done); }
+  .navbar {
+    position: fixed; bottom: 0; left: 0; right: 0; display: flex;
+    background: var(--card); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 10;
+  }
+  .navbar button { flex: 1; background: none; border: none; padding: 10px 4px 12px; font-size: 12px; color: var(--done); font-family: inherit; }
+  .navbar button.active { color: var(--accent); font-weight: 700; }
+  pre#reportText { white-space: pre-wrap; font-family: "SF Mono", Menlo, monospace; font-size: 12.5px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  textarea { width: 100%; min-height: 80px; font-size: 15px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-family: inherit; }
+</style>
+</head>
+<body>
+
+<header><h1>🏠 Residential</h1></header>
+<main id="app"></main>
+
+<nav class="navbar">
+  <button data-view="home">Inicio</button>
+  <button data-view="rooms">Habitaciones</button>
+  <button data-view="stairs">Escaleras</button>
+  <button data-view="report">Reporte</button>
+</nav>
+
+<script>
+const STORAGE_KEY = "residential_tech_estado_v1";
+
+const DEFAULT_FLOORS = ["Basement", "Piso 1", "Piso 2", "Piso 3", "Piso 4", "Piso 5"];
+
+function nuevoEstado() {
+  return {
+    address: "",
+    floors: [...DEFAULT_FLOORS],
+    rooms: [],       // {id, floor, name, measurements:[{id,largo,ancho,sqft}]}
+    stairs: [],      // {id, from, to, escalones}
+    landings: [],    // {id, ancho, largo, sqft} — independiente de las escaleras
+    notes: "",
+    hasCopiedReport: false,
+  };
+}
+
+let state = cargar();
+let view = "home";
+let ui = {};
+
+function cargar() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      // Migración: estados viejos sin pisos por defecto, o con landings dentro de cada escalera
+      if (!s.floors || s.floors.length === 0) s.floors = [...DEFAULT_FLOORS];
+      if (!s.landings) s.landings = [];
+      if (s.stairs) s.stairs.forEach(st => {
+        if (st.landings && st.landings.length) {
+          st.landings.forEach(sqft => s.landings.push({ id: uid(), ancho: "", largo: "", sqft }));
+        }
+        delete st.landings;
+        delete st.landingSqft;
+      });
+      return s;
+    }
+  } catch (e) {}
+  return nuevoEstado();
+}
+function guardar() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+function uid() { return Math.random().toString(36).slice(2, 9); }
+function ftsq(largo, ancho) { return (parseFloat(largo) || 0) * (parseFloat(ancho) || 0); }
+function fieldNumber(id, value, placeholder) {
+  return `<input type="number" inputmode="decimal" id="${id}" value="${value ?? ""}" placeholder="${placeholder || "0"}">`;
+}
+function roomSqft(r) { return r.measurements.reduce((s, m) => s + m.sqft, 0); }
+
+// Siguiente número de "Room N" libre (si renombras Room 3, ese número vuelve a estar disponible)
+function nextRoomNumber() {
+  let n = 1;
+  while (state.rooms.some(r => r.name.trim().toLowerCase() === `room ${n}`)) n++;
+  return n;
+}
+
+document.querySelectorAll(".navbar button").forEach(btn => {
+  btn.addEventListener("click", () => { view = btn.dataset.view; ui = {}; render(); });
+});
+
+/* ---- Helper: selects de piso, alimentados por state.floors ---- */
+function floorSelectHtml(id, selected) {
+  const opts = state.floors.map(f => `<option value="${f}" ${f === selected ? "selected" : ""}>${f}</option>`).join("");
+  return `<select id="${id}">${opts}<option value="__new__" ${selected === "__new__" ? "selected" : ""}>+ Otro (nuevo piso)</option></select>`;
+}
+function agregarPisoSiNuevo(nombre) {
+  nombre = nombre.trim();
+  if (nombre && !state.floors.includes(nombre)) state.floors.push(nombre);
+  return nombre;
+}
+
+/* ================= HOME ================= */
+function renderHome() {
+  return `
+    <a href="index.html" class="btn ghost small" style="display:inline-block;margin-bottom:10px;text-decoration:none">🏠 Menú principal</a>
+    <div class="card">
+      <div class="field">
+        <label>Dirección / nombre (opcional)</label>
+        <input type="text" id="address" value="${state.address.replace(/"/g,'&quot;')}" placeholder="Ej. 123 Main St">
+      </div>
+    </div>
+
+    <h2>¿Qué registras primero?</h2>
+    <div class="card btn-row">
+      <button class="btn" data-goto="rooms">Habitaciones</button>
+      <button class="btn secondary" data-goto="stairs">Escaleras</button>
+    </div>
+
+    <h2>Notas</h2>
+    <div class="card"><textarea id="notes" placeholder="Observaciones...">${state.notes.replace(/</g,'&lt;')}</textarea></div>
+
+    <h2>Reporte</h2>
+    <div class="card"><button class="btn block" data-goto="report">📄 Ver / generar reporte final</button></div>
+
+    <h2>Levantamiento</h2>
+    <div class="card">
+      ${state.hasCopiedReport
+        ? `<button class="btn block ghost" id="resetAll">🗑 Nuevo levantamiento (casa nueva)</button>`
+        : `<p class="muted">Copia el reporte final al menos una vez para poder empezar uno nuevo.</p>
+           <button class="btn block ghost" disabled>🗑 Nuevo levantamiento</button>`}
+    </div>
+  `;
+}
+function bindHome() {
+  document.getElementById("address").addEventListener("input", e => { state.address = e.target.value; guardar(); });
+  document.getElementById("notes").addEventListener("input", e => { state.notes = e.target.value; guardar(); });
+  document.querySelectorAll("[data-goto]").forEach(el => el.addEventListener("click", () => { view = el.dataset.goto; ui = {}; render(); }));
+  const resetBtn = document.getElementById("resetAll");
+  if (resetBtn) resetBtn.addEventListener("click", () => {
+    if (confirm("¿Seguro? Se borrará todo lo registrado de esta casa.")) { state = nuevoEstado(); ui = {}; guardar(); render(); }
+  });
+}
+
+/* ================= HABITACIONES ================= */
+function renderRooms() {
+  const totalSqft = state.rooms.reduce((s, r) => s + roomSqft(r), 0);
+
+  const floorForNew = ui.selFloorRoom || state.floors[0] || "__new__";
+  const showNewFloorInput = floorForNew === "__new__";
+  const sugerido = `Room ${nextRoomNumber()}`;
+
+  const addForm = `
+    <div class="card">
+      <div class="field"><label>Piso</label>${floorSelectHtml("floorRoomSel", floorForNew)}</div>
+      ${showNewFloorInput ? `<div class="field"><label>Nombre del piso nuevo</label><input type="text" id="newFloorRoom" placeholder="Ej. Piso 2"></div>` : ""}
+      <div class="field"><label>Nombre de la habitación</label><input type="text" id="roomName" value="${ui.roomNameDraft ?? sugerido}"></div>
+      <div class="field"><label>Ancho (ft)</label>${fieldNumber("roomWidth", ui.rW, "0")}</div>
+      <div class="field"><label>Largo (ft)</label>${fieldNumber("roomLength", ui.rL, "0")}</div>
+      <button class="btn block" id="addRoom">Agregar habitación</button>
+    </div>
+  `;
+
+  const porPiso = {};
+  state.rooms.forEach(r => { (porPiso[r.floor] = porPiso[r.floor] || []).push(r); });
+
+  const rowsHtml = Object.keys(porPiso).map(floor => {
+    const items = porPiso[floor].map(r => {
+      const subs = r.measurements.length > 1 ? r.measurements.map((m, i) => `
+        <div class="sub-item">
+          <span>Medida ${i + 1}: ${m.sqft.toFixed(2)} ft²</span>
+          <button class="btn ghost small" data-del-measure="${r.id}:${m.id}">Quitar</button>
+        </div>
+      `).join("") : "";
+
+      const editForm = ui.editingRoomId === r.id ? `
+        <div class="field" style="margin-top:8px"><label>Nombre</label><input type="text" id="editRoomName" value="${r.name.replace(/"/g,'&quot;')}"></div>
+        <div class="btn-row">
+          <button class="btn small" data-save-room="${r.id}">Guardar</button>
+          <button class="btn ghost small" id="cancelEditRoom">Cancelar</button>
+        </div>
+      ` : "";
+
+      const addMeasureForm = ui.addingMeasureFor === r.id ? `
+        <div class="card" style="margin-top:8px">
+          <div class="field"><label>Ancho (ft)</label>${fieldNumber("measWidth", "", "0")}</div>
+          <div class="field"><label>Largo (ft)</label>${fieldNumber("measLength", "", "0")}</div>
+          <div class="btn-row">
+            <button class="btn small" data-confirm-measure="${r.id}">Agregar</button>
+            <button class="btn ghost small" id="cancelMeasure">Cancelar</button>
+          </div>
+        </div>
+      ` : "";
+
+      return `
+        <div class="card">
+          <div class="row">
+            <span class="name"><b>${r.name}</b> — ${roomSqft(r).toFixed(2)} ft²</span>
+            <button class="btn ghost small" data-del-room="${r.id}">Borrar</button>
+          </div>
+          ${subs}
+          ${editForm}
+          <div class="btn-row" style="margin-top:6px">
+            <button class="btn secondary small" data-add-measure="${r.id}">+ Medida adicional</button>
+            <button class="btn ghost small" data-edit-room="${r.id}">Editar</button>
+          </div>
+          ${addMeasureForm}
+        </div>
+      `;
+    }).join("");
+    return `<h2>${floor}</h2>${items}`;
+  }).join("");
+
+  return `
+    <button class="btn ghost small" id="backRoomsHome">← Volver a Inicio</button>
+    <div class="tally">Total acumulado: <b>${totalSqft.toFixed(2)} ft²</b> · <b>${state.rooms.length} habitaciones</b></div>
+    ${addForm}
+    ${rowsHtml || `<div class="card muted">Todavía no hay habitaciones registradas.</div>`}
+  `;
+}
+
+function bindRooms() {
+  document.getElementById("backRoomsHome").addEventListener("click", () => { view = "home"; ui = {}; render(); });
+
+  const floorSel = document.getElementById("floorRoomSel");
+  floorSel.addEventListener("change", () => {
+    // Conservar lo ya escrito antes de re-renderizar por el cambio de piso
+    ui.roomNameDraft = document.getElementById("roomName").value;
+    ui.rW = document.getElementById("roomWidth").value;
+    ui.rL = document.getElementById("roomLength").value;
+    ui.selFloorRoom = floorSel.value;
+    render();
+  });
+
+  document.getElementById("addRoom").addEventListener("click", () => {
+    let floor = document.getElementById("floorRoomSel").value;
+    if (floor === "__new__") {
+      floor = agregarPisoSiNuevo(document.getElementById("newFloorRoom").value);
+      if (!floor) { alert("Escribe el nombre del piso nuevo."); return; }
+    }
+    const name = document.getElementById("roomName").value.trim() || `Room ${nextRoomNumber()}`;
+    const w = document.getElementById("roomWidth").value;
+    const l = document.getElementById("roomLength").value;
+    state.rooms.push({ id: uid(), floor, name, measurements: [{ id: uid(), largo: l, ancho: w, sqft: ftsq(l, w) }] });
+    ui.selFloorRoom = floor; ui.roomNameDraft = null; ui.rW = ""; ui.rL = "";
+    guardar(); render();
+  });
+
+  document.querySelectorAll("[data-del-room]").forEach(el => el.addEventListener("click", () => {
+    state.rooms = state.rooms.filter(r => r.id !== el.dataset.delRoom);
+    guardar(); render();
+  }));
+
+  document.querySelectorAll("[data-edit-room]").forEach(el => el.addEventListener("click", () => {
+    ui.editingRoomId = el.dataset.editRoom; render();
+  }));
+  const cancelEditRoom = document.getElementById("cancelEditRoom");
+  if (cancelEditRoom) cancelEditRoom.addEventListener("click", () => { ui.editingRoomId = null; render(); });
+  document.querySelectorAll("[data-save-room]").forEach(el => el.addEventListener("click", () => {
+    const r = state.rooms.find(x => x.id === el.dataset.saveRoom);
+    r.name = document.getElementById("editRoomName").value.trim() || r.name;
+    ui.editingRoomId = null; guardar(); render();
+  }));
+
+  document.querySelectorAll("[data-add-measure]").forEach(el => el.addEventListener("click", () => {
+    ui.addingMeasureFor = el.dataset.addMeasure; render();
+  }));
+  const cancelMeasure = document.getElementById("cancelMeasure");
+  if (cancelMeasure) cancelMeasure.addEventListener("click", () => { ui.addingMeasureFor = null; render(); });
+  document.querySelectorAll("[data-confirm-measure]").forEach(el => el.addEventListener("click", () => {
+    const r = state.rooms.find(x => x.id === el.dataset.confirmMeasure);
+    const w = document.getElementById("measWidth").value;
+    const l = document.getElementById("measLength").value;
+    r.measurements.push({ id: uid(), largo: l, ancho: w, sqft: ftsq(l, w) });
+    ui.addingMeasureFor = null; guardar(); render();
+  }));
+
+  document.querySelectorAll("[data-del-measure]").forEach(el => el.addEventListener("click", () => {
+    const [roomId, measId] = el.dataset.delMeasure.split(":");
+    const r = state.rooms.find(x => x.id === roomId);
+    if (r && r.measurements.length > 1) r.measurements = r.measurements.filter(m => m.id !== measId);
+    guardar(); render();
+  }));
+}
+
+/* ================= ESCALERAS ================= */
+function stairsTotales() {
+  return state.stairs.reduce((s, x) => s + x.escalones, 0);
+}
+function landingsTotal() {
+  return state.landings.reduce((s, l) => s + l.sqft, 0);
+}
+
+function renderStairs() {
+  const totalEsc = stairsTotales();
+  const totalLand = landingsTotal();
+  const from = ui.selFrom || state.floors[0] || "__new__";
+  const to = ui.selTo || state.floors[1] || state.floors[0] || "__new__";
+  const escSugerido = ui.escDraft ?? (state.stairs.length ? state.stairs[state.stairs.length - 1].escalones : "");
+
+  const addForm = `
+    <div class="card">
+      <div class="field"><label>De piso</label>${floorSelectHtml("fromSel", from)}</div>
+      ${from === "__new__" ? `<div class="field"><label>Nombre del piso nuevo</label><input type="text" id="newFloorFrom" placeholder="Ej. Piso 2"></div>` : ""}
+      <div class="field"><label>A piso</label>${floorSelectHtml("toSel", to)}</div>
+      ${to === "__new__" ? `<div class="field"><label>Nombre del piso nuevo</label><input type="text" id="newFloorTo" placeholder="Ej. Basement"></div>` : ""}
+      <div class="field"><label>Escalones</label>${fieldNumber("escInput", escSugerido, "0")}</div>
+      <button class="btn block" id="addStair">Agregar escalera</button>
+    </div>
+  `;
+
+  const rows = state.stairs.map(s => {
+    if (ui.editingStairId === s.id) {
+      return `
+        <div class="card">
+          <div class="field"><label>${s.from} → ${s.to}</label></div>
+          <div class="field"><label>Escalones</label>${fieldNumber("editStairEsc", s.escalones, "0")}</div>
+          <div class="btn-row">
+            <button class="btn small" data-save-stair="${s.id}">Guardar</button>
+            <button class="btn ghost small" id="cancelEditStair">Cancelar</button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="card">
+        <div class="row">
+          <span class="name">${s.from} → ${s.to}</span>
+          <button class="btn ghost small" data-del-stair="${s.id}">Borrar</button>
+        </div>
+        <div class="muted">${s.escalones} escalones</div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn ghost small" data-edit-stair="${s.id}">Editar</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // --- Sección de Landings, completamente separada ---
+  const landingRows = state.landings.map(l => {
+    if (ui.editingLandingId === l.id) {
+      return `
+        <div class="card">
+          <div class="field"><label>Ancho (ft)</label>${fieldNumber("editLandW", l.ancho, "0")}</div>
+          <div class="field"><label>Largo (ft)</label>${fieldNumber("editLandL", l.largo, "0")}</div>
+          <div class="btn-row">
+            <button class="btn small" data-save-landing="${l.id}">Guardar</button>
+            <button class="btn ghost small" id="cancelEditLanding">Cancelar</button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="card">
+        <div class="row">
+          <span class="name">Landing — ${l.sqft.toFixed(2)} ft²</span>
+          <button class="btn ghost small" data-del-landing="${l.id}">Borrar</button>
+        </div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn ghost small" data-edit-landing="${l.id}">Editar</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const landingForm = `
+    <div class="card">
+      <div class="field"><label>Ancho (ft)</label>${fieldNumber("newLandW", ui.landW, "0")}</div>
+      <div class="field"><label>Largo (ft)</label>${fieldNumber("newLandL", ui.landL, "0")}</div>
+      <button class="btn block secondary" id="addLanding">+ Agregar landing</button>
+    </div>
+  `;
+
+  return `
+    <button class="btn ghost small" id="backStairsHome">← Volver a Inicio</button>
+    <div class="tally">Total acumulado: <b>${totalEsc} escalones</b></div>
+    ${addForm}
+    <h2>Escaleras registradas</h2>
+    ${rows || `<div class="card muted">Todavía no hay escaleras registradas.</div>`}
+
+    <h2>Landings (independiente)</h2>
+    <div class="tally">Total landings: <b>${totalLand.toFixed(2)} ft²</b> (se suma al área total)</div>
+    ${landingForm}
+    ${landingRows || `<div class="card muted">Todavía no hay landings registrados.</div>`}
+  `;
+}
+
+function bindStairs() {
+  document.getElementById("backStairsHome").addEventListener("click", () => { view = "home"; ui = {}; render(); });
+
+  function guardarDraftEscalones() {
+    const el = document.getElementById("escInput");
+    if (el) ui.escDraft = el.value;
+  }
+  document.getElementById("fromSel").addEventListener("change", (e) => { guardarDraftEscalones(); ui.selFrom = e.target.value; render(); });
+  document.getElementById("toSel").addEventListener("change", (e) => { guardarDraftEscalones(); ui.selTo = e.target.value; render(); });
+
+  document.getElementById("addStair").addEventListener("click", () => {
+    let from = document.getElementById("fromSel").value;
+    if (from === "__new__") { from = agregarPisoSiNuevo(document.getElementById("newFloorFrom").value); if (!from) { alert("Escribe el piso de origen."); return; } }
+    let to = document.getElementById("toSel").value;
+    if (to === "__new__") { to = agregarPisoSiNuevo(document.getElementById("newFloorTo").value); if (!to) { alert("Escribe el piso de destino."); return; } }
+    const escalones = parseFloat(document.getElementById("escInput").value) || 0;
+
+    state.stairs.push({ id: uid(), from, to, escalones });
+    ui.selFrom = to; // "to" se mantiene igual que estaba, no se resetea a un piso por defecto
+    ui.escDraft = escalones;
+    guardar(); render();
+  });
+
+  document.querySelectorAll("[data-del-stair]").forEach(el => el.addEventListener("click", () => {
+    state.stairs = state.stairs.filter(s => s.id !== el.dataset.delStair);
+    guardar(); render();
+  }));
+
+  document.querySelectorAll("[data-edit-stair]").forEach(el => el.addEventListener("click", () => { ui.editingStairId = el.dataset.editStair; render(); }));
+  const cancelEditStair2 = document.getElementById("cancelEditStair");
+  if (cancelEditStair2) cancelEditStair2.addEventListener("click", () => { ui.editingStairId = null; render(); });
+  document.querySelectorAll("[data-save-stair]").forEach(el => el.addEventListener("click", () => {
+    const s = state.stairs.find(x => x.id === el.dataset.saveStair);
+    s.escalones = parseFloat(document.getElementById("editStairEsc").value) || 0;
+    ui.editingStairId = null; guardar(); render();
+  }));
+
+  /* ---- Landings (independientes) ---- */
+  document.getElementById("addLanding").addEventListener("click", () => {
+    const w = document.getElementById("newLandW").value;
+    const l = document.getElementById("newLandL").value;
+    if (!w && !l) { alert("Ingresa al menos el ancho y el largo."); return; }
+    state.landings.push({ id: uid(), ancho: w, largo: l, sqft: ftsq(l, w) });
+    ui.landW = w; ui.landL = l; // se mantienen para agilizar el siguiente si se repite
+    guardar(); render();
+  });
+
+  document.querySelectorAll("[data-del-landing]").forEach(el => el.addEventListener("click", () => {
+    state.landings = state.landings.filter(l => l.id !== el.dataset.delLanding);
+    guardar(); render();
+  }));
+
+  document.querySelectorAll("[data-edit-landing]").forEach(el => el.addEventListener("click", () => { ui.editingLandingId = el.dataset.editLanding; render(); }));
+  const cancelEditLanding = document.getElementById("cancelEditLanding");
+  if (cancelEditLanding) cancelEditLanding.addEventListener("click", () => { ui.editingLandingId = null; render(); });
+  document.querySelectorAll("[data-save-landing]").forEach(el => el.addEventListener("click", () => {
+    const l = state.landings.find(x => x.id === el.dataset.saveLanding);
+    const w = document.getElementById("editLandW").value;
+    const ll = document.getElementById("editLandL").value;
+    l.ancho = w; l.largo = ll; l.sqft = ftsq(ll, w);
+    ui.editingLandingId = null; guardar(); render();
+  }));
+}
+
+/* ================= REPORTE ================= */
+const SQFT = "ft\u00B2";
+function fmtInt(n) { return Math.ceil(n || 0).toLocaleString("en-US"); }
+function fmtSqft(n) { return `${fmtInt(n)} ${SQFT}`; }
+
+function generarReporte() {
+  const sep = "=".repeat(40);
+  const lines = [];
+  lines.push(sep);
+  lines.push("RESIDENTIAL SERVICE REPORT");
+  if (state.address) lines.push(`Address: ${state.address.toUpperCase()}`);
+  lines.push(sep);
+
+  const roomsSqft = state.rooms.reduce((s, r) => s + roomSqft(r), 0);
+  const totalEsc = stairsTotales();
+  const totalLand = landingsTotal();
+  const totalArea = roomsSqft + totalLand; // en Residential, el landing se suma al área total
+
+  lines.push("");
+  lines.push("SUMMARY");
+  lines.push("-".repeat(24));
+  lines.push(`Total Area:   ${fmtSqft(totalArea)}`);
+  lines.push(`Total Steps:  ${fmtInt(totalEsc)}`);
+
+  lines.push("");
+  lines.push("ROOMS BREAKDOWN");
+  lines.push("-".repeat(24));
+  const porPiso = {};
+  state.rooms.forEach(r => { (porPiso[r.floor] = porPiso[r.floor] || []).push(r); });
+  if (Object.keys(porPiso).length === 0) lines.push("(no data)");
+  Object.keys(porPiso).forEach(floor => {
+    lines.push(`${floor}:`);
+    porPiso[floor].forEach(r => lines.push(`  ${r.name}: ${fmtSqft(roomSqft(r))}`));
+  });
+
+  lines.push("");
+  lines.push("STAIRS BREAKDOWN");
+  lines.push("-".repeat(24));
+  if (state.stairs.length === 0) lines.push("(no data)");
+  state.stairs.forEach(s => lines.push(`  ${s.from} -> ${s.to}: ${fmtInt(s.escalones)} steps`));
+
+  if (state.landings.length > 0) {
+    lines.push("");
+    lines.push("LANDINGS");
+    lines.push("-".repeat(24));
+    state.landings.forEach((l, i) => lines.push(`  Landing ${i + 1}: ${fmtSqft(l.sqft)}`));
+    lines.push(`  Subtotal: ${fmtSqft(totalLand)} (included in Total Area)`);
+  }
+
+  if (state.notes.trim()) {
+    lines.push("");
+    lines.push("NOTES");
+    lines.push("-".repeat(24));
+    lines.push(state.notes.trim());
+  }
+
+  lines.push("");
+  lines.push(sep);
+  return lines.join("\n");
+}
+
+function renderReport() {
+  const texto = generarReporte();
+  return `
+    <button class="btn ghost small" id="backFromReport">← Volver</button>
+    <h2>Reporte final</h2>
+    <pre id="reportText">${texto.replace(/</g, "&lt;")}</pre>
+    <button class="btn block" id="copyReport">📋 Copiar reporte</button>
+  `;
+}
+function bindReport(texto) {
+  document.getElementById("backFromReport").addEventListener("click", () => { view = "home"; ui = {}; render(); });
+  document.getElementById("copyReport").addEventListener("click", (e) => {
+    state.hasCopiedReport = true; guardar();
+    navigator.clipboard.writeText(texto).then(() => {
+      e.target.innerText = "✅ Copiado";
+      setTimeout(() => { e.target.innerText = "📋 Copiar reporte"; }, 1800);
+    }).catch(() => {
+      e.target.innerText = "⚠️ No se pudo copiar — selecciona el texto manualmente";
+      setTimeout(() => { e.target.innerText = "📋 Copiar reporte"; }, 2500);
+    });
+  });
+}
+
+/* ================= RENDER PRINCIPAL ================= */
+function render() {
+  document.querySelectorAll(".navbar button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  const app = document.getElementById("app");
+  if (view === "home") { app.innerHTML = renderHome(); bindHome(); }
+  else if (view === "rooms") { app.innerHTML = renderRooms(); bindRooms(); }
+  else if (view === "stairs") { app.innerHTML = renderStairs(); bindStairs(); }
+  else if (view === "report") { const texto = generarReporte(); app.innerHTML = renderReport(); bindReport(texto); }
+}
+
+render();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

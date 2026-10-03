@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reporte de servicio técnico</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1F2A24">
+<style>
+  :root {
+    --bg: #F6F3EC;
+    --ink: #1F2A24;
+    --accent: #4B6A4E;
+    --accent-2: #8A6A3C;
+    --line: #D8D2C2;
+    --done: #9A9A8E;
+    --card: #FFFFFF;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141815; --ink: #EDEAE2; --accent: #7FA383;
+      --accent-2: #C9A26B; --line: #2B322C; --done: #5C6259; --card: #1B211C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141815; --ink: #EDEAE2; --accent: #7FA383;
+    --accent-2: #C9A26B; --line: #2B322C; --done: #5C6259; --card: #1B211C;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+  header {
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  .sub { font-size: 13px; color: var(--done); margin-top: 2px; }
+  main { padding: 14px 16px 90px; max-width: 520px; margin: 0 auto; }
+  h2 { font-size: 16px; margin: 18px 0 8px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: none; }
+  .row .name { font-size: 15px; }
+  .muted { color: var(--done); font-size: 13px; }
+  label { display: block; font-size: 13px; color: var(--done); margin-bottom: 4px; }
+  input[type=text], input[type=number] {
+    width: 100%; font-size: 16px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-family: inherit;
+  }
+  .field { margin-bottom: 10px; }
+  .btn {
+    font-family: inherit; font-size: 15px; font-weight: 600; padding: 11px 16px;
+    border-radius: 10px; border: none; background: var(--accent); color: var(--bg); cursor: pointer;
+  }
+  .btn.secondary { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .btn.small { padding: 7px 12px; font-size: 13px; }
+  .btn.block { width: 100%; }
+  .btn:active { opacity: .85; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; padding: 9px 14px; border-radius: 999px;
+    border: 1px solid var(--line); font-size: 14px; cursor: pointer; margin: 4px 6px 4px 0;
+  }
+  .chip.on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .tally { background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 10px 0; }
+  .tally b { color: var(--accent-2); }
+  .log-item { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+  .navbar {
+    position: fixed; bottom: 0; left: 0; right: 0; display: flex;
+    background: var(--card); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 10;
+  }
+  .navbar button {
+    flex: 1; background: none; border: none; padding: 10px 4px 12px; font-size: 12px;
+    color: var(--done); font-family: inherit;
+  }
+  .navbar button.active { color: var(--accent); font-weight: 700; }
+  pre#reportText {
+    white-space: pre-wrap; font-family: "SF Mono", Menlo, monospace; font-size: 12.5px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  }
+  textarea {
+    width: 100%; min-height: 80px; font-size: 15px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="header-title">Reporte de servicio técnico</h1>
+  <div class="sub" id="header-sub"></div>
+</header>
+
+<main id="app"></main>
+
+<nav class="navbar">
+  <button data-view="home">Inicio</button>
+  <button data-view="hallways">Hallways</button>
+  <button data-view="stairs">Escaleras</button>
+  <button data-view="report">Reporte</button>
+</nav>
+
+<script>
+/* ---------- Estado ---------- */
+const STORAGE_KEY = "reporte_tecnico_estado_v1";
+
+function nuevoEstado() {
+  return {
+    building: "",
+    logistics: { Parking: false, Bathroom: false, Laundry: false, Elevator: false },
+    hallways: [],       // {id, label, sqft, extras:[{id,name,sqft}]}
+    staircases: [],     // {id, name, landingSqft:null, tramos:[{id,label,escalones,landings}], status, log:[], currentTramoLabel, hasRoofAsked}
+    notes: "",
+    hasCopiedReport: false,
+  };
+}
+
+let state = cargar();
+let view = "home";
+let ui = {}; // estado temporal de pantallas (inputs abiertos, etc.)
+
+function cargar() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return nuevoEstado();
+}
+function guardar() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+/* ---------- Navegación ---------- */
+document.querySelectorAll(".navbar button").forEach(btn => {
+  btn.addEventListener("click", () => { view = btn.dataset.view; ui = {}; render(); });
+});
+
+/* ---------- Helpers de UI ---------- */
+function h(strings) { return strings; } // no-op, solo legibilidad
+
+function fieldNumber(idAttr, value, placeholder) {
+  return `<input type="number" inputmode="decimal" id="${idAttr}" value="${value ?? ""}" placeholder="${placeholder || ""}">`;
+}
+
+function ftsq(largo, ancho) { return (parseFloat(largo) || 0) * (parseFloat(ancho) || 0); }
+
+/* ================= HOME ================= */
+function renderHome() {
+  const logi = state.logistics;
+  return `
+    <a href="index.html" class="btn ghost small" style="display:inline-block;margin-bottom:10px;text-decoration:none">🏠 Menú principal</a>
+    <div class="card">
+      <div class="field">
+        <label>Nombre del edificio (opcional)</label>
+        <input type="text" id="building" value="${state.building.replace(/"/g,'&quot;')}" placeholder="Ej. Torre Central">
+      </div>
+    </div>
+
+    <h2>Logística disponible</h2>
+    <div class="card">
+      ${Object.keys(logi).map(k => `<span class="chip ${logi[k] ? "on" : ""}" data-logi="${k}">${k}</span>`).join("")}
+    </div>
+
+    <h2>¿Qué registras primero?</h2>
+    <div class="card btn-row">
+      <button class="btn" data-goto="hallways">Hallways</button>
+      <button class="btn secondary" data-goto="stairs">Escaleras</button>
+    </div>
+
+    <h2>Notas</h2>
+    <div class="card">
+      <textarea id="notes" placeholder="Nivel de suciedad, observaciones, etc.">${state.notes.replace(/</g,'&lt;')}</textarea>
+    </div>
+
+    <h2>Reporte</h2>
+    <div class="card">
+      <button class="btn block" data-goto="report">📄 Ver / generar reporte final</button>
+    </div>
+
+    <h2>Levantamiento</h2>
+    <div class="card">
+      ${state.hasCopiedReport
+        ? `<button class="btn block ghost" id="resetAll">🗑 Nuevo levantamiento (edificio nuevo)</button>`
+        : `<p class="muted">Copia el reporte final al menos una vez para poder empezar un levantamiento nuevo.</p>
+           <button class="btn block ghost" disabled>🗑 Nuevo levantamiento</button>`
+      }
+    </div>
+  `;
+}
+
+function bindHome() {
+  document.getElementById("building").addEventListener("input", e => { state.building = e.target.value; guardar(); });
+  document.getElementById("notes").addEventListener("input", e => { state.notes = e.target.value; guardar(); });
+  document.querySelectorAll("[data-logi]").forEach(el => {
+    el.addEventListener("click", () => {
+      const k = el.dataset.logi;
+      state.logistics[k] = !state.logistics[k];
+      guardar(); render();
+    });
+  });
+  document.querySelectorAll("[data-goto]").forEach(el => {
+    el.addEventListener("click", () => { view = el.dataset.goto; ui = {}; render(); });
+  });
+  const resetBtn = document.getElementById("resetAll");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      if (confirm("¿Seguro? Se borrará todo lo registrado de este edificio.")) {
+        state = nuevoEstado();
+        ui = {};
+        guardar(); render();
+      }
+    });
+  }
+}
+
+/* ================= HALLWAYS ================= */
+// Pisos "conocidos" por lo ya ingresado en Hallways o en Escaleras (el que sea mayor)
+function pisosConocidos() {
+  let fromHallways = state.hallways.length || 0;
+  let fromStairs = 0;
+  state.staircases.forEach(esc => {
+    const sf = parseInt(esc.startFloor);
+    if (!isNaN(sf) && sf > fromStairs) fromStairs = sf;
+  });
+  const max = Math.max(fromHallways, fromStairs);
+  return max > 0 ? max : null;
+}
+
+function renderHallways() {
+  const rows = state.hallways.map((f, idx) => {
+    const extras = f.extras.map(ex => `
+      <div class="row">
+        <span class="name">${ex.name} <span class="muted">(${ex.sqft.toFixed(2)} ft²)</span></span>
+        <button class="btn ghost small" data-del-extra="${f.id}:${ex.id}">Quitar</button>
+      </div>
+    `).join("");
+
+    const extraFormInline = ui.addingExtraFor === f.id ? `
+      <div class="card" style="margin-top:8px">
+        <div class="field"><label>Nombre del espacio</label><input type="text" id="extraName" placeholder="Ej. Meeting Room"></div>
+        <div class="field"><label>Largo (ft)</label>${fieldNumber("extraLargo", ui.exLargo, "0")}</div>
+        <div class="field"><label>Ancho (ft)</label>${fieldNumber("extraAncho", ui.exAncho, "0")}</div>
+        <div class="btn-row">
+          <button class="btn" id="confirmExtra">Agregar espacio</button>
+          <button class="btn ghost" id="cancelExtra">Cancelar</button>
+        </div>
+      </div>
+    ` : "";
+
+    return `
+      <div class="card">
+        <div class="row">
+          <span class="name"><b>${f.label}</b> — ${f.sqft.toFixed(2)} ft²</span>
+          <button class="btn ghost small" data-del-floor="${f.id}">Quitar</button>
+        </div>
+        ${extras}
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn secondary small" data-add-extra="${f.id}">+ Espacio adicional</button>
+        </div>
+        ${extraFormInline}
+      </div>
+    `;
+  }).join("");
+
+  const last = state.hallways[state.hallways.length - 1];
+  const prevLargo = ui.hLargo ?? (last ? last._largo : "");
+  const prevAncho = ui.hAncho ?? (last ? last._ancho : "");
+  const nextLabel = `Piso ${state.hallways.length + 1}`;
+
+  const conocido = pisosConocidos();
+  const topeAlcanzado = conocido && state.hallways.length >= conocido && !ui.forceAddFloor;
+
+  const addFloorSection = topeAlcanzado ? `
+    <h2>Agregar piso</h2>
+    <div class="card">
+      <p class="muted">Ya se registraron los ${conocido} pisos esperados (según lo ingresado en Escaleras/Hallways).</p>
+      <button class="btn block secondary" id="forceAddFloor">+ Agregar piso adicional (manual)</button>
+    </div>
+  ` : `
+    <h2>${ui.editFloorLabel ? "Editar piso" : "Agregar piso"}</h2>
+    <div class="card">
+      <div class="field"><label>Etiqueta</label><input type="text" id="floorLabel" value="${ui.editFloorLabel || nextLabel}"></div>
+      <div class="field"><label>Largo (ft)</label>${fieldNumber("floorLargo", prevLargo, "0")}</div>
+      <div class="field"><label>Ancho (ft)</label>${fieldNumber("floorAncho", prevAncho, "0")}</div>
+      <button class="btn block" id="confirmFloor">Agregar / Actualizar piso</button>
+    </div>
+  `;
+
+  const totalSqft = state.hallways.reduce((s, f) => s + f.sqft + f.extras.reduce((s2, e) => s2 + e.sqft, 0), 0);
+
+  return `
+    <button class="btn ghost small" id="backHallwaysHome">← Volver a Inicio</button>
+
+    <div class="tally">Total Hallways acumulado: <b>${totalSqft.toFixed(2)} ft²</b></div>
+
+    ${addFloorSection}
+
+    <h2>Pisos registrados</h2>
+    ${rows || `<div class="card muted">Todavía no hay pisos registrados.</div>`}
+  `;
+}
+
+function bindHallways() {
+  document.getElementById("backHallwaysHome").addEventListener("click", () => {
+    view = "home"; ui = {}; render();
+  });
+
+  const confirmFloorBtn = document.getElementById("confirmFloor");
+  if (confirmFloorBtn) {
+    confirmFloorBtn.addEventListener("click", () => {
+      const label = document.getElementById("floorLabel").value.trim() || `Piso ${state.hallways.length + 1}`;
+      const largo = document.getElementById("floorLargo").value;
+      const ancho = document.getElementById("floorAncho").value;
+      const sqft = ftsq(largo, ancho);
+      const existing = state.hallways.find(f => f.label === label);
+      if (existing) {
+        existing.sqft = sqft; existing._largo = largo; existing._ancho = ancho;
+      } else {
+        state.hallways.push({ id: uid(), label, sqft, _largo: largo, _ancho: ancho, extras: [] });
+      }
+      ui.hLargo = largo; ui.hAncho = ancho;
+      ui.forceAddFloor = false;
+      guardar(); render();
+    });
+  }
+
+  const forceBtn = document.getElementById("forceAddFloor");
+  if (forceBtn) forceBtn.addEventListener("click", () => { ui.forceAddFloor = true; render(); });
+
+  document.querySelectorAll("[data-del-floor]").forEach(el => {
+    el.addEventListener("click", () => {
+      state.hallways = state.hallways.filter(f => f.id !== el.dataset.delFloor);
+      guardar(); render();
+    });
+  });
+
+  document.querySelectorAll("[data-add-extra]").forEach(el => {
+    el.addEventListener("click", () => { ui.addingExtraFor = el.dataset.addExtra; render(); });
+  });
+
+  if (ui.addingExtraFor) {
+    document.getElementById("confirmExtra").addEventListener("click", () => {
+      const name = document.getElementById("extraName").value.trim() || "Espacio adicional";
+      const largo = document.getElementById("extraLargo").value;
+      const ancho = document.getElementById("extraAncho").value;
+      const floor = state.hallways.find(f => f.id === ui.addingExtraFor);
+      if (floor) floor.extras.push({ id: uid(), name, sqft: ftsq(largo, ancho) });
+      ui.addingExtraFor = null;
+      guardar(); render();
+    });
+    document.getElementById("cancelExtra").addEventListener("click", () => { ui.addingExtraFor = null; render(); });
+  }
+
+  document.querySelectorAll("[data-del-extra]").forEach(el => {
+    el.addEventListener("click", () => {
+      const [floorId, extraId] = el.dataset.delExtra.split(":");
+      const floor = state.hallways.find(f => f.id === floorId);
+      if (floor) floor.extras = floor.extras.filter(ex => ex.id !== extraId);
+      guardar(); render();
+    });
+  });
+}
+
+/* ================= ESCALERAS ================= */
+function tramoTotales(tramo) {
+  return { escalones: tramo.escalones, landings: tramo.landings };
+}
+function escaleraTotales(esc) {
+  let escalones = 0, landings = 0;
+  esc.tramos.forEach(t => { escalones += t.escalones; landings += t.landings; });
+  return { escalones, landings, landingSqftTotal: landings * (esc.landingSqft || 0) };
+}
+
+function renderStairs() {
+  const activa = state.staircases.find(e => e.id === ui.activeStaircaseId);
+
+  if (ui.viewingTramosFor) {
+    const esc = state.staircases.find(e => e.id === ui.viewingTramosFor);
+    return renderTramosList(esc);
+  }
+
+  if (activa && activa.status === "building-tramo") {
+    return renderTramoActivo(activa);
+  }
+  if (activa && activa.status === "ask-start") {
+    return renderAskStart(activa);
+  }
+  if (activa && activa.status === "ask-roof") {
+    return renderAskRoof(activa);
+  }
+  if (activa && activa.status === "ask-basement") {
+    return renderAskBasement(activa);
+  }
+
+  // Lista general de escaleras
+  const cards = state.staircases.map(esc => {
+    const t = escaleraTotales(esc);
+    const estadoTxt = esc.status === "done" ? "Completada" : "En progreso";
+    return `
+      <div class="card">
+        <div class="row">
+          <span class="name"><b>${esc.name}</b> <span class="muted">(${estadoTxt})</span></span>
+          <button class="btn small ${esc.status === "done" ? "ghost" : ""}" data-open-stair="${esc.id}">
+            ${esc.status === "done" ? "Ver" : "Continuar"}
+          </button>
+        </div>
+        <div class="muted">Total: ${t.escalones} escalones · ${t.landings} landings (${t.landingSqftTotal.toFixed(2)} ft²)</div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn ghost small" data-view-tramos="${esc.id}">📋 Ver / editar tramos</button>
+          <button class="btn ghost small" data-del-stair="${esc.id}">🗑 Eliminar escalera</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <button class="btn ghost small" id="backStairsHome">← Volver a Inicio</button>
+    <h2>Escaleras</h2>
+    ${cards || `<div class="card muted">Todavía no hay escaleras registradas.</div>`}
+    <button class="btn block" id="newStair">+ Nueva escalera</button>
+  `;
+}
+
+function bindStairsList() {
+  const backBtn = document.getElementById("backStairsHome");
+  if (backBtn) backBtn.addEventListener("click", () => { view = "home"; ui = {}; render(); });
+
+  const btn = document.getElementById("newStair");
+  if (btn) btn.addEventListener("click", () => {
+    const esc = {
+      id: uid(), name: `Escalera ${state.staircases.length + 1}`,
+      landingSqft: null, tramos: [], status: "ask-start",
+      startFloor: "", hasRoof: null, currentLabel: "", log: [],
+    };
+    state.staircases.push(esc);
+    ui.activeStaircaseId = esc.id;
+    guardar(); render();
+  });
+  document.querySelectorAll("[data-open-stair]").forEach(el => {
+    el.addEventListener("click", () => {
+      const esc = state.staircases.find(e => e.id === el.dataset.openStair);
+      ui.activeStaircaseId = esc.id;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-view-tramos]").forEach(el => {
+    el.addEventListener("click", () => {
+      ui.viewingTramosFor = el.dataset.viewTramos;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-del-stair]").forEach(el => {
+    el.addEventListener("click", () => {
+      if (confirm("¿Eliminar esta escalera por completo? No se puede deshacer.")) {
+        state.staircases = state.staircases.filter(e => e.id !== el.dataset.delStair);
+        if (ui.activeStaircaseId === el.dataset.delStair) ui.activeStaircaseId = null;
+        guardar(); render();
+      }
+    });
+  });
+}
+
+/* ---- Pantalla separada: ver / editar tramos ---- */
+function renderTramosList(esc) {
+  const rows = esc.tramos.map((t, idx) => {
+    if (ui.editingTramoIdx === idx) {
+      return `
+        <div class="card">
+          <div class="field"><label>${t.label}</label></div>
+          <div class="field"><label>Escalones</label>${fieldNumber("editEsc", t.escalones, "0")}</div>
+          <div class="field"><label>Landings</label>${fieldNumber("editLand", t.landings, "0")}</div>
+          <div class="btn-row">
+            <button class="btn small" data-save-tramo="${idx}">Guardar</button>
+            <button class="btn ghost small" id="cancelEditTramo">Cancelar</button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="card">
+        <div class="row">
+          <span class="name">${t.label}</span>
+        </div>
+        <div class="muted">${t.escalones} escalones · ${t.landings} landing(s)</div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn ghost small" data-edit-tramo="${idx}">Editar</button>
+          <button class="btn ghost small" data-del-tramo="${idx}">Borrar</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const t = escaleraTotales(esc);
+
+  return `
+    <h2>${esc.name} — Tramos</h2>
+    ${rows || `<div class="card muted">Todavía no hay tramos registrados.</div>`}
+    <div class="card muted">Total: ${t.escalones} escalones · ${t.landingSqftTotal.toFixed(2)} ft² landings</div>
+    <button class="btn block ghost" id="cerrarTramos">← Volver</button>
+  `;
+}
+
+function bindTramosList(esc) {
+  document.getElementById("cerrarTramos").addEventListener("click", () => {
+    ui.viewingTramosFor = null;
+    ui.editingTramoIdx = null;
+    render();
+  });
+
+  document.querySelectorAll("[data-edit-tramo]").forEach(el => {
+    el.addEventListener("click", () => {
+      ui.editingTramoIdx = parseInt(el.dataset.editTramo);
+      render();
+    });
+  });
+
+  const cancelBtn = document.getElementById("cancelEditTramo");
+  if (cancelBtn) cancelBtn.addEventListener("click", () => { ui.editingTramoIdx = null; render(); });
+
+  document.querySelectorAll("[data-save-tramo]").forEach(el => {
+    el.addEventListener("click", () => {
+      const idx = parseInt(el.dataset.saveTramo);
+      esc.tramos[idx].escalones = parseFloat(document.getElementById("editEsc").value) || 0;
+      esc.tramos[idx].landings = parseInt(document.getElementById("editLand").value) || 0;
+      ui.editingTramoIdx = null;
+      guardar(); render();
+    });
+  });
+
+  document.querySelectorAll("[data-del-tramo]").forEach(el => {
+    el.addEventListener("click", () => {
+      esc.tramos.splice(parseInt(el.dataset.delTramo), 1);
+      guardar(); render();
+    });
+  });
+}
+
+function renderAskStart(esc) {
+  const conocido = pisosConocidos();
+  return `
+    <button class="btn ghost small" id="cancelNewStair">← Cancelar</button>
+    <h2>${esc.name} — Iniciar</h2>
+    <div class="card">
+      <div class="field"><label>¿En qué piso empiezas?</label><input type="text" id="startFloor" value="${esc.startFloor || conocido || ""}" placeholder="Ej. 4"></div>
+      <button class="btn block" id="confirmStart">Continuar</button>
+    </div>
+  `;
+}
+function bindAskStart(esc) {
+  document.getElementById("cancelNewStair").addEventListener("click", () => {
+    state.staircases = state.staircases.filter(e => e.id !== esc.id);
+    ui.activeStaircaseId = null;
+    guardar(); render();
+  });
+  document.getElementById("confirmStart").addEventListener("click", () => {
+    esc.startFloor = document.getElementById("startFloor").value.trim() || "?";
+    esc.status = "ask-roof";
+    guardar(); render();
+  });
+}
+
+function renderAskRoof(esc) {
+  return `
+    <button class="btn ghost small" id="backToStart">← Atrás (corregir piso)</button>
+    <h2>${esc.name} — Piso ${esc.startFloor}</h2>
+    <div class="card">
+      <p>¿Hay tramo hacia <b>Roof</b>?</p>
+      <div class="btn-row">
+        <button class="btn" id="roofSi">Sí</button>
+        <button class="btn secondary" id="roofNo">No</button>
+      </div>
+    </div>
+  `;
+}
+function bindAskRoof(esc) {
+  document.getElementById("backToStart").addEventListener("click", () => {
+    esc.status = "ask-start";
+    guardar(); render();
+  });
+  document.getElementById("roofSi").addEventListener("click", () => {
+    esc.currentLabel = `Roof → Piso ${esc.startFloor}`;
+    esc.log = []; esc.status = "building-tramo"; esc._afterRoof = true;
+    guardar(); render();
+  });
+  document.getElementById("roofNo").addEventListener("click", () => {
+    iniciarTramoDesde(esc, esc.startFloor);
+    guardar(); render();
+  });
+}
+
+function iniciarTramoDesde(esc, fromFloor) {
+  const from = parseInt(fromFloor);
+  const to = from - 1;
+  esc._pendingFrom = from;
+  esc._pendingTo = to;
+  esc.currentLabel = `Piso ${from} → Piso ${to}`;
+  esc.log = [];
+  esc.status = "building-tramo";
+}
+
+function ultimoValorEscalones(esc) {
+  for (let i = esc.tramos.length - 1; i >= 0; i--) {
+    if (esc.tramos[i].escalones) return esc.tramos[i].escalones;
+  }
+  return "";
+}
+
+function renderTramoActivo(esc) {
+  const log = esc.log || [];
+  const totalEsc = log.filter(x => x.type === "esc").reduce((s, x) => s + x.n, 0);
+  const totalLand = log.filter(x => x.type === "land").length;
+  const escSugerido = ui.escInput ?? ultimoValorEscalones(esc) ?? "";
+  const necesitaMedidaLanding = esc.landingSqft === null && totalLand === 0 && !ui.askingLandingDim;
+
+  const totalesEscalera = escaleraTotales(esc);
+
+  const landingDimForm = ui.askingLandingDim ? `
+    <div class="card">
+      <p class="muted">Primera vez que agregas un landing en esta escalera — indica su medida (se reutilizará para los demás).</p>
+      <div class="field"><label>Largo (ft)</label>${fieldNumber("landLargo", "", "0")}</div>
+      <div class="field"><label>Ancho (ft)</label>${fieldNumber("landAncho", "", "0")}</div>
+      <button class="btn block" id="confirmLandingDim">Guardar medida y agregar landing</button>
+    </div>
+  ` : "";
+
+  return `
+    <button class="btn ghost small" id="verTramos">📋 Ver / editar tramos de esta escalera</button>
+
+    <h2>${esc.name} — ${esc.currentLabel}</h2>
+
+    <div class="tally">
+      ${esc.currentLabel}: <b>${totalEsc} escalones</b> · <b>${totalLand} landing${totalLand === 1 ? "" : "s"}</b><br>
+      Total escalera: <b>${totalesEscalera.escalones} escalones</b> · <b>${totalesEscalera.landingSqftTotal.toFixed(2)} ft² landings</b>
+    </div>
+
+    <div class="card">
+      <div class="field"><label>Escalones a agregar</label>${fieldNumber("escInput", escSugerido, "0")}</div>
+      <div class="btn-row">
+        <button class="btn" id="addEsc">+ Escalones</button>
+        <button class="btn secondary" id="addLand">+ Landing</button>
+      </div>
+    </div>
+
+    ${landingDimForm}
+
+    <button class="btn block" id="finishTramo">Terminar tramo</button>
+
+    <h2>Registrado en este tramo</h2>
+    <div class="card">
+      ${log.length ? log.map((x, i) => `
+        <div class="log-item">
+          <span>${x.type === "esc" ? x.n + " escalones" : "Landing"}</span>
+          <button class="btn ghost small" data-del-log="${i}">Quitar</button>
+        </div>
+      `).join("") : `<div class="muted">Nada registrado todavía en este tramo.</div>`}
+    </div>
+  `;
+}
+
+function bindTramoActivo(esc) {
+  document.getElementById("verTramos").addEventListener("click", () => {
+    ui.viewingTramosFor = esc.id;
+    render();
+  });
+
+  document.querySelectorAll("[data-del-log]").forEach(el => {
+    el.addEventListener("click", () => {
+      esc.log.splice(parseInt(el.dataset.delLog), 1);
+      guardar(); render();
+    });
+  });
+
+  document.getElementById("addEsc").addEventListener("click", () => {
+    const n = parseFloat(document.getElementById("escInput").value) || 0;
+    esc.log.push({ type: "esc", n });
+    ui.escInput = n;
+    guardar(); render();
+  });
+
+  document.getElementById("addLand").addEventListener("click", () => {
+    if (esc.landingSqft === null) {
+      ui.askingLandingDim = true;
+      render();
+      return;
+    }
+    esc.log.push({ type: "land" });
+    guardar(); render();
+  });
+
+  if (ui.askingLandingDim) {
+    document.getElementById("confirmLandingDim").addEventListener("click", () => {
+      const largo = document.getElementById("landLargo").value;
+      const ancho = document.getElementById("landAncho").value;
+      esc.landingSqft = ftsq(largo, ancho);
+      esc.log.push({ type: "land" });
+      ui.askingLandingDim = false;
+      guardar(); render();
+    });
+  }
+
+  document.getElementById("finishTramo").addEventListener("click", () => {
+    const escalones = esc.log.filter(x => x.type === "esc").reduce((s, x) => s + x.n, 0);
+    const landings = esc.log.filter(x => x.type === "land").length;
+    esc.tramos.push({ id: uid(), label: esc.currentLabel, escalones, landings });
+    ui.escInput = null;
+
+    if (esc._afterRoof) {
+      // Después del tramo de roof, seguimos bajando automáticamente desde el piso de inicio
+      esc._afterRoof = false;
+      iniciarTramoDesde(esc, esc.startFloor);
+    } else if (esc._closingFinal) {
+      // Tramo hacia Basement recién completado: la escalera queda cerrada
+      esc._closingFinal = false;
+      esc.status = "done";
+      ui.activeStaircaseId = null;
+    } else if (esc._pendingTo > 1) {
+      // Sigue habiendo piso debajo: continúa automáticamente, sin preguntar
+      iniciarTramoDesde(esc, esc._pendingTo);
+    } else {
+      // Se llegó al Piso 1 — único punto manual: ¿hay Basement o se finaliza?
+      esc.status = "ask-basement";
+    }
+    guardar(); render();
+  });
+}
+
+function renderAskBasement(esc) {
+  return `
+    <h2>${esc.name} — Piso 1</h2>
+    <div class="card">
+      <p>Llegaste al Piso 1. ¿Hay <b>Basement</b>?</p>
+      <div class="btn-row">
+        <button class="btn" id="yesBasement">Sí, registrar tramo</button>
+        <button class="btn ghost" id="noBasement">No, finalizar aquí</button>
+      </div>
+    </div>
+  `;
+}
+function bindAskBasement(esc) {
+  document.getElementById("yesBasement").addEventListener("click", () => {
+    esc.currentLabel = "Piso 1 → Basement";
+    esc.log = [];
+    esc.status = "building-tramo";
+    esc._closingFinal = true;
+    guardar(); render();
+  });
+  document.getElementById("noBasement").addEventListener("click", () => {
+    esc.status = "done";
+    ui.activeStaircaseId = null;
+    guardar(); render();
+  });
+}
+
+/* ================= REPORTE ================= */
+const SQFT = "ft\u00B2"; // ft²
+
+function fmtInt(n) {
+  return Math.ceil(n || 0).toLocaleString("en-US");
+}
+function fmtSqft(n) {
+  return `${fmtInt(n)} ${SQFT}`;
+}
+// Traduce etiquetas internas (Piso / Escalera) al inglés para el reporte final
+function enLabel(s) {
+  return (s || "").replace(/Piso/g, "Floor").replace(/Escalera/g, "Staircase");
+}
+
+function generarReporte() {
+  const sep = "=".repeat(40);
+  const lines = [];
+  lines.push(sep);
+  lines.push("TECH SERVICE REPORT");
+  if (state.building) lines.push(`Building: ${state.building.toUpperCase()}`);
+  lines.push(sep);
+
+  const totalHallways = state.hallways.reduce((s, f) => s + f.sqft + f.extras.reduce((s2, e) => s2 + e.sqft, 0), 0);
+  let totalEscalones = 0, totalLandingSqft = 0;
+  state.staircases.forEach(esc => {
+    const t = escaleraTotales(esc);
+    totalEscalones += t.escalones;
+    totalLandingSqft += t.landingSqftTotal;
+  });
+
+  lines.push("");
+  lines.push("SUMMARY");
+  lines.push("-".repeat(24));
+  lines.push(`Total Hallways:   ${fmtSqft(totalHallways)}`);
+  lines.push(`Total Steps:      ${fmtInt(totalEscalones)}`);
+  lines.push(`Total Landings:   ${fmtSqft(totalLandingSqft)}`);
+
+  lines.push("");
+  lines.push("HALLWAYS BREAKDOWN");
+  lines.push("-".repeat(24));
+  if (state.hallways.length === 0) lines.push("(no data)");
+  state.hallways.forEach(f => {
+    lines.push(`${enLabel(f.label)}:  ${fmtSqft(f.sqft)}`);
+    f.extras.forEach(ex => lines.push(`  + ${ex.name}: ${fmtSqft(ex.sqft)}`));
+  });
+
+  lines.push("");
+  lines.push("STAIRWELLS BREAKDOWN");
+  lines.push("-".repeat(24));
+  if (state.staircases.length === 0) lines.push("(no data)");
+  state.staircases.forEach(esc => {
+    lines.push(enLabel(esc.name) + ":");
+    esc.tramos.forEach(t => {
+      lines.push(`  ${enLabel(t.label)}:  ${fmtInt(t.escalones)} steps, ${fmtInt(t.landings)} landing(s)`);
+    });
+    const t = escaleraTotales(esc);
+    lines.push(`  Subtotal: ${fmtInt(t.escalones)} steps, ${fmtSqft(t.landingSqftTotal)} landings`);
+    lines.push("");
+  });
+
+  const logiOn = Object.keys(state.logistics).filter(k => state.logistics[k]);
+  lines.push("LOGISTICS");
+  lines.push("-".repeat(24));
+  lines.push(logiOn.length ? logiOn.join(", ") : "(none marked)");
+
+  if (state.notes.trim()) {
+    lines.push("");
+    lines.push("NOTES");
+    lines.push("-".repeat(24));
+    lines.push(state.notes.trim());
+  }
+
+  lines.push("");
+  lines.push(sep);
+  return lines.join("\n");
+}
+
+function renderReport() {
+  const texto = generarReporte();
+  return `
+    <button class="btn ghost small" id="backFromReport">← Volver</button>
+    <h2>Reporte final</h2>
+    <pre id="reportText">${texto.replace(/</g, "&lt;")}</pre>
+    <button class="btn block" id="copyReport">📋 Copiar reporte</button>
+  `;
+}
+function bindReport(texto) {
+  document.getElementById("backFromReport").addEventListener("click", () => {
+    view = "home"; ui = {}; render();
+  });
+  document.getElementById("copyReport").addEventListener("click", (e) => {
+    // Se habilita "Nuevo levantamiento" apenas se intenta copiar,
+    // sin depender de que el navegador confirme el copiado técnico.
+    state.hasCopiedReport = true;
+    guardar();
+
+    navigator.clipboard.writeText(texto).then(() => {
+      e.target.innerText = "✅ Copiado";
+      setTimeout(() => { e.target.innerText = "📋 Copiar reporte"; }, 1800);
+    }).catch(() => {
+      e.target.innerText = "⚠️ No se pudo copiar — selecciona el texto manualmente";
+      setTimeout(() => { e.target.innerText = "📋 Copiar reporte"; }, 2500);
+    });
+  });
+}
+
+/* ================= RENDER PRINCIPAL ================= */
+function render() {
+  document.querySelectorAll(".navbar button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  const app = document.getElementById("app");
+
+  if (view === "home") {
+    app.innerHTML = renderHome();
+    bindHome();
+  } else if (view === "hallways") {
+    app.innerHTML = renderHallways();
+    bindHallways();
+  } else if (view === "stairs") {
+    app.innerHTML = renderStairs();
+    if (ui.viewingTramosFor) {
+      const esc = state.staircases.find(e => e.id === ui.viewingTramosFor);
+      bindTramosList(esc);
+    } else {
+      const activa = state.staircases.find(e => e.id === ui.activeStaircaseId);
+      if (!activa) { bindStairsList(); }
+      else if (activa.status === "ask-start") bindAskStart(activa);
+      else if (activa.status === "ask-roof") bindAskRoof(activa);
+      else if (activa.status === "building-tramo") bindTramoActivo(activa);
+      else if (activa.status === "ask-basement") bindAskBasement(activa);
+      else bindStairsList();
+    }
+  } else if (view === "report") {
+    const texto = generarReporte();
+    app.innerHTML = renderReport();
+    bindReport(texto);
+  }
+}
+
+render();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
